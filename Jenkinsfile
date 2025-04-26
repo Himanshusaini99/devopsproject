@@ -6,7 +6,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Himanshusaini99/devopsproject.git'
+                git branch: 'master', url: 'https://github.com/Himanshusaini99/devopsproject.git'
             }
         }
         stage('Build Docker Image') {
