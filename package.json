@@ -1,0 +1,12 @@
+{
+    "name": "devopsproject",
+    "version": "1.0.0",
+    "description": "DevOps Project Web Application",
+    "scripts": {
+      "start": "serve -s .",
+      "build": "echo 'Building static files...'"
+    },
+    "dependencies": {
+      "serve": "^14.2.0"
+    }
+  }
