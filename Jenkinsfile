@@ -8,18 +8,18 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm  // Single checkout is sufficient
+                checkout scm  
             }
         }
         
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Verify Docker is accessible
+            
                     def dockerVersion = bat(script: 'docker --version', returnStdout: true).trim()
                     echo "Docker Version: ${dockerVersion}"
                     
-                    // Build using direct Docker CLI (more reliable than plugin)
+                    
                     bat """
                     docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} .
                     """
