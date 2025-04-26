@@ -3,28 +3,46 @@ pipeline {
     
     environment {
         DOCKER_IMAGE = 'himanshusaini99/devopsproject'
-        // Remove credentials from here if not properly configured
     }
     
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([$class: 'GitSCM', 
+                         branches: [[name: '*/master']],
+                         extensions: [],
+                         userRemoteConfigs: [[url: 'https://github.com/Himanshusaini99/devopsproject.git']]
+                        ])
+            }
+        }
+        
+        stage('Verify Docker') {
+            steps {
+                script {
+                    // Verify Docker is installed and accessible
+                    def dockerVersion = bat(script: 'docker --version', returnStdout: true).trim()
+                    echo "Docker version: ${dockerVersion}"
+                    
+                    // Alternative check if Docker Pipeline plugin is installed
+                    try {
+                        docker.withRegistry('') {}
+                        echo "Docker Pipeline plugin is available"
+                    } catch (Exception e) {
+                        error "Docker Pipeline plugin not installed or configured"
+                    }
+                }
             }
         }
         
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Check if Docker is available
+                    // Build with error handling
                     try {
-                        docker.version()
+                        docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
                     } catch (Exception e) {
-                        error "Docker is not available. Please install Docker Pipeline plugin and configure Docker."
+                        error "Failed to build Docker image: ${e.message}"
                     }
-                    
-                    // Build with fallback if credentials aren't configured
-                    docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
                 }
             }
         }
@@ -32,14 +50,14 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    bat '''
+                    bat """
                     echo Stopping and removing any existing container...
                     docker stop devopsproject || echo "No container to stop"
                     docker rm devopsproject || echo "No container to remove"
                     
                     echo Starting new container...
-                    docker run -d -p 9090:80 --name devopsproject %DOCKER_IMAGE%:%BUILD_NUMBER%
-                    '''
+                    docker run -d -p 9090:80 --name devopsproject ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
+                    """
                 }
             }
         }
@@ -47,15 +65,14 @@ pipeline {
     
     post {
         always {
-            script {
-                // Wrapped in node context
-                node {
-                    cleanWs()
-                }
-            }
+            cleanWs()
         }
         failure {
-            echo 'Pipeline failed! Check Docker configuration and credentials.'
+            echo 'Pipeline failed! See logs for details.'
+            // Optional: Send notification
+        }
+        success {
+            echo 'Pipeline succeeded!'
         }
     }
 }
