@@ -8,41 +8,21 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', 
-                         branches: [[name: '*/master']],
-                         extensions: [],
-                         userRemoteConfigs: [[url: 'https://github.com/Himanshusaini99/devopsproject.git']]
-                        ])
-            }
-        }
-        
-        stage('Verify Docker') {
-            steps {
-                script {
-                    // Verify Docker is installed and accessible
-                    def dockerVersion = bat(script: 'docker --version', returnStdout: true).trim()
-                    echo "Docker version: ${dockerVersion}"
-                    
-                    // Alternative check if Docker Pipeline plugin is installed
-                    try {
-                        docker.withRegistry('') {}
-                        echo "Docker Pipeline plugin is available"
-                    } catch (Exception e) {
-                        error "Docker Pipeline plugin not installed or configured"
-                    }
-                }
+                checkout scm  // Single checkout is sufficient
             }
         }
         
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build with error handling
-                    try {
-                        docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
-                    } catch (Exception e) {
-                        error "Failed to build Docker image: ${e.message}"
-                    }
+                    // Verify Docker is accessible
+                    def dockerVersion = bat(script: 'docker --version', returnStdout: true).trim()
+                    echo "Docker Version: ${dockerVersion}"
+                    
+                    // Build using direct Docker CLI (more reliable than plugin)
+                    bat """
+                    docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} .
+                    """
                 }
             }
         }
@@ -51,7 +31,7 @@ pipeline {
             steps {
                 script {
                     bat """
-                    echo Stopping and removing any existing container...
+                    echo Stopping existing container...
                     docker stop devopsproject || echo "No container to stop"
                     docker rm devopsproject || echo "No container to remove"
                     
@@ -66,13 +46,6 @@ pipeline {
     post {
         always {
             cleanWs()
-        }
-        failure {
-            echo 'Pipeline failed! See logs for details.'
-            // Optional: Send notification
-        }
-        success {
-            echo 'Pipeline succeeded!'
         }
     }
 }
